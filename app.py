@@ -1,12 +1,49 @@
-from flask import Flask, render_template, url_for
-from forms import RegistrationForm, LoginForm
-app = Flask(__name__)
+# https://youtu.be/cYWiDiIUxQc?t=1056
 
+from datetime import datetime
+from flask import Flask, render_template, url_for, flash, redirect
+from flask_sqlalchemy import SQLAlchemy
+from forms import RegistrationForm, LoginForm
+
+#global objects
+usr_char_limit = 20
+email_char_limit = 120
+picture_hash_limit = 20
+password_hash_limit = 60
+post_title_limit = 100
+
+#webapp
+app = Flask(__name__)
 # secret key to protect against cross site forgery attacks
 app.config['SECRET_KEY'] = '193d0f87084aa73c395f89fb8a31c30c'
+# database setup using SQLite
+app.config['SQLALCHEMY_DATABASE_URI'] = 'squlite:///site.db'
+db = SQLAlchemy(app)
+
+class User(db.Model):
+	id = db.Column(db.Integer, primary_key=True)
+	username = db.Column(db.String(usr_char_limit), unique=True, nullable=False)
+	email = db.Column(db.String(email_char_limit), unique=True, nullable=False)
+	profile_pic = db.Column(db.String(picture_hash_limit), nullable=False, default='default.jpg')
+	password = db.Column(db.string(password_hash_limit), nullable=False)
+	# one to many query of author to post class, backreference allows post to go to author attribute
+	posts = db.relationship('Post', backref='author', lazy=True)
+
+	def __repr__(self):
+		return f"User('{self.username}', '{self.email}', '{self.image_file}')"
+
+class Post(db.Model):
+	id = db.Column(db.Integer, primary_key=True)
+	title = db.Column(db.String(100), nullable=False)
+	date_posted = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+	content = db.Column(db.Text, nullable=False)
+	# user.id is lowercase because it is linked to tablename
+	user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable = False)
+
+	def __repr__(self):
+		return f"Post('{self.title}','{self.date_posted}')"
 
 # mock posts created
-
 posts = [
 	{
 		'author': 'Terry Thurk',
